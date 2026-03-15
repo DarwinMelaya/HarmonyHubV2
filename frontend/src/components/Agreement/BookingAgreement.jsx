@@ -62,6 +62,9 @@ const BookingAgreement = ({
     ? new Date(bookingData.agreedAt)
     : new Date();
 
+  const downpaymentDate =
+    bookingData?.downpaymentDate || bookingData?.transactionDate || null;
+
   const clearSignature = () => {
     sigCanvas.current.clear();
     setSignature(null);
@@ -391,6 +394,19 @@ const BookingAgreement = ({
                         {!isFullPaymentSelection && (
                           <p className="text-xs text-gray-400">
                             {computedDownpaymentPercentage}% of total amount
+                          </p>
+                        )}
+                        {downpaymentDate && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Downpayment Date:&nbsp;
+                            {new Date(downpaymentDate).toLocaleDateString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
                           </p>
                         )}
                       </div>

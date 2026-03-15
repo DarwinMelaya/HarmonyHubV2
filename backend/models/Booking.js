@@ -138,6 +138,13 @@ const BookingSchema = new mongoose.Schema({
   paymentVerifiedAt: {
     type: Date,
   },
+  // High-level financial timeline fields
+  transactionDate: {
+    type: Date,
+  },
+  downpaymentDate: {
+    type: Date,
+  },
   // ✅ New Fields for Completion Issues
   issueType: {
     type: String,

@@ -105,6 +105,14 @@ const UserBooking = () => {
         bookingDate: selectedBookingForPayment.bookingDate,
         bookingTime: selectedBookingForPayment.bookingTime,
         contactInfo: selectedBookingForPayment.contactInfo || {},
+        transactionDate:
+          selectedBookingForPayment.transactionDate ||
+          selectedBookingForPayment.paymentSubmittedAt ||
+          null,
+        downpaymentDate:
+          selectedBookingForPayment.downpaymentDate ||
+          selectedBookingForPayment.paymentSubmittedAt ||
+          null,
         paymentMethod:
           pendingPaymentPayload?.paymentMethod ||
           selectedBookingForPayment.paymentMethod ||
@@ -662,6 +670,27 @@ const UserBooking = () => {
                           : "-"}
                         {b.bookingTime ? ` • ${b.bookingTime}` : ""}
                       </div>
+                      {(b.transactionDate || b.paymentSubmittedAt) && (
+                        <div className="mb-1 text-xs text-gray-400">
+                          <span className="font-medium text-gray-300">
+                            Transaction Date:
+                          </span>{" "}
+                          {new Date(
+                            b.transactionDate || b.paymentSubmittedAt
+                          ).toLocaleString()}
+                        </div>
+                      )}
+                      {b.downpaymentAmount > 0 &&
+                        (b.downpaymentDate || b.paymentSubmittedAt) && (
+                          <div className="mb-1 text-xs text-gray-400">
+                            <span className="font-medium text-gray-300">
+                              Downpayment Date:
+                            </span>{" "}
+                            {new Date(
+                              b.downpaymentDate || b.paymentSubmittedAt
+                            ).toLocaleDateString()}
+                          </div>
+                        )}
                       <div className="space-y-1">
                         <div className="text-gray-400">Items:</div>
                         {(b.items || []).map((it, idx) => (

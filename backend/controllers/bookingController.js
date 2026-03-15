@@ -1007,7 +1007,12 @@ const submitPaymentDetails = async (req, res) => {
     booking.remainingBalance = safeRemainingBalance;
     booking.paymentStatus = "submitted";
     booking.paymentSelectionAt = booking.paymentSelectionAt || new Date();
-    booking.paymentSubmittedAt = new Date();
+    const now = new Date();
+    booking.paymentSubmittedAt = now;
+    booking.transactionDate = now;
+    if (safeDownpaymentAmount > 0 && !booking.downpaymentDate) {
+      booking.downpaymentDate = now;
+    }
 
     await booking.save();
     await booking.populate("user", "fullName email username");
