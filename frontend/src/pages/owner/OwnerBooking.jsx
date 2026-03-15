@@ -315,6 +315,18 @@ const OwnerBooking = () => {
   };
 
   const handleCompletionSubmit = (issueData = {}) => {
+    if (!selectedBooking) return;
+
+    // If damage/lost issues are reported, do NOT try to complete.
+    if (
+      issueData.issueType === "damaged" ||
+      issueData.issueType === "lost"
+    ) {
+      updateBookingStatus(selectedBooking._id, selectedBooking.status, issueData);
+      setShowCompleteModal(false);
+      return;
+    }
+
     if (completionStep === "confirm") {
       updateBookingStatus(selectedBooking._id, "completed");
       setShowCompleteModal(false);

@@ -644,6 +644,18 @@ const updateBookingStatus = async (req, res) => {
         booking.affectedItems = affectedItems;
       }
 
+      // If there are damage/lost issues reported, block completion
+      if (
+        booking.issueType === "damaged" ||
+        booking.issueType === "lost"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Booking cannot be marked as completed while there are reported damaged or lost items. Please record and settle the damage/penalty fee first.",
+        });
+      }
+
       // Clear remaining balance when marking as completed
       // This means the balance has been collected from the client
       booking.remainingBalance = 0;

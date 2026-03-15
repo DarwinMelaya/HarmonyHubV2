@@ -29,6 +29,14 @@ const CompletionModal = ({
         affectedItems: selectedItems,
       };
       onCompletionSubmit(issueData);
+      if (
+        issueType === "damaged" ||
+        issueType === "lost"
+      ) {
+        alert(
+          "Damage or lost items were reported.\n\nA damage/penalty fee must be assessed and settled before this booking can be marked as completed. The transaction will remain not completed until then."
+        );
+      }
     }
   };
 

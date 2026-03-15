@@ -218,6 +218,16 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  // Penalty / damage fee that must be settled before completion
+  damageFeeAmount: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  damageFeePaid: {
+    type: Boolean,
+    default: false,
+  },
   refundAmount: {
     type: Number,
     min: 0,
