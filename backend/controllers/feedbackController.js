@@ -69,11 +69,51 @@ const submitFeedback = async (req, res) => {
   }
 };
 
-// Get user's own feedback
+// Get user's own feedback, with optional filters
 const getMyFeedback = async (req, res) => {
   try {
     const userId = req.userId;
-    const feedbacks = await Feedback.find({ user: userId })
+    const {
+      minRating,
+      maxRating,
+      search,
+      wouldRecommend,
+    } = req.query;
+
+    const filter = { user: userId };
+    if (minRating) {
+      filter["overallSatisfaction.rating"] = { $gte: parseInt(minRating, 10) };
+    }
+    if (maxRating) {
+      filter["overallSatisfaction.rating"] = {
+        ...(filter["overallSatisfaction.rating"] || {}),
+        $lte: parseInt(maxRating, 10),
+      };
+    }
+    if (typeof wouldRecommend === "string") {
+      if (wouldRecommend === "true") {
+        filter["valueFeedback.wouldRecommend"] = true;
+      } else if (wouldRecommend === "false") {
+        filter["valueFeedback.wouldRecommend"] = false;
+      }
+    }
+
+    let query = Feedback.find(filter);
+
+    if (search && search.trim()) {
+      const regex = new RegExp(search.trim(), "i");
+      query = query.find({
+        $or: [
+          { "overallSatisfaction.comment": regex },
+          { additionalComments: regex },
+          { "serviceUsage.comment": regex },
+          { "equipmentStatus.comment": regex },
+          { "valueFeedback.comment": regex },
+        ],
+      });
+    }
+
+    const feedbacks = await query
       .populate("booking", "totalAmount bookingDate status")
       .sort({ createdAt: -1 });
 
@@ -91,27 +131,103 @@ const getMyFeedback = async (req, res) => {
   }
 };
 
-// Get all feedback (owners/admins only)
+// Get all feedback (owners/admins only) with flexible filters
 const getAllFeedback = async (req, res) => {
   try {
-    const { status, startDate, endDate, minRating } = req.query;
+    const {
+      status,
+      startDate,
+      endDate,
+      minRating,
+      maxRating,
+      search,
+      bookingStatus,
+      wouldRecommend,
+      customerName,
+    } = req.query;
 
     const filter = {};
     if (status) filter.status = status;
     if (minRating) {
       filter["overallSatisfaction.rating"] = { $gte: parseInt(minRating) };
     }
+    if (maxRating) {
+      filter["overallSatisfaction.rating"] = {
+        ...(filter["overallSatisfaction.rating"] || {}),
+        $lte: parseInt(maxRating),
+      };
+    }
     if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
+    if (typeof wouldRecommend === "string") {
+      if (wouldRecommend === "true") {
+        filter["valueFeedback.wouldRecommend"] = true;
+      } else if (wouldRecommend === "false") {
+        filter["valueFeedback.wouldRecommend"] = false;
+      }
+    }
 
-    const feedbacks = await Feedback.find(filter)
+    // Build text search conditions if search term provided
+    let query = Feedback.find(filter);
+
+    if (search && search.trim()) {
+      const regex = new RegExp(search.trim(), "i");
+      query = query.find({
+        $or: [
+          { "overallSatisfaction.comment": regex },
+          { additionalComments: regex },
+          { "serviceUsage.comment": regex },
+          { "equipmentStatus.comment": regex },
+          { "valueFeedback.comment": regex },
+        ],
+      });
+    }
+
+    // If customerName filter is provided, first resolve matching user IDs
+    if (customerName && customerName.trim()) {
+      const nameRegex = new RegExp(customerName.trim(), "i");
+      const matchingUsers = await User.find({
+        $or: [
+          { fullName: nameRegex },
+          { email: nameRegex },
+          { username: nameRegex },
+        ],
+      }).select("_id");
+      const userIds = matchingUsers.map((u) => u._id);
+
+      // If no users match, return empty result early
+      if (userIds.length === 0) {
+        return res.json({ success: true, data: [] });
+      }
+
+      query = query.find({ user: { $in: userIds } });
+    }
+
+    let feedbacks = await query
       .populate("user", "fullName email")
       .populate("booking", "totalAmount bookingDate status")
       .populate("response.respondedBy", "fullName")
       .sort({ createdAt: -1 });
+
+    // Optional client-side booking status filter (because booking is populated)
+    if (bookingStatus) {
+      const bookingStatusArray = Array.isArray(bookingStatus)
+        ? bookingStatus
+        : String(bookingStatus)
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+      if (bookingStatusArray.length > 0) {
+        feedbacks = feedbacks.filter(
+          (fb) =>
+            fb.booking &&
+            bookingStatusArray.includes(fb.booking.status)
+        );
+      }
+    }
 
     res.json({
       success: true,

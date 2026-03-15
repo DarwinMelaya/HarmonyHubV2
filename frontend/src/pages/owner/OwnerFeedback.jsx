@@ -36,6 +36,10 @@ const OwnerFeedback = () => {
     endDate: "",
     status: "",
     minRating: "",
+    maxRating: "",
+    wouldRecommend: "",
+    search: "",
+    customerName: "",
   });
 
   useEffect(() => {
@@ -78,6 +82,12 @@ const OwnerFeedback = () => {
       if (filters.endDate) params.append("endDate", filters.endDate);
       if (filters.status) params.append("status", filters.status);
       if (filters.minRating) params.append("minRating", filters.minRating);
+      if (filters.maxRating) params.append("maxRating", filters.maxRating);
+      if (filters.wouldRecommend)
+        params.append("wouldRecommend", filters.wouldRecommend);
+      if (filters.search) params.append("search", filters.search);
+      if (filters.customerName)
+        params.append("customerName", filters.customerName);
 
       const url = `${API_BASE_URL}/feedback${
         params.toString() ? `?${params.toString()}` : ""
@@ -222,7 +232,7 @@ const OwnerFeedback = () => {
               <Filter className="w-5 h-5 text-gray-400" />
               <h3 className="text-lg font-semibold">Filters</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Start Date</label>
                 <input
@@ -276,6 +286,42 @@ const OwnerFeedback = () => {
                   <option value="2">2+ Stars</option>
                   <option value="1">1+ Stars</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Recommend / Search
+                </label>
+                <div className="flex flex-col gap-2">
+                  <select
+                    value={filters.wouldRecommend}
+                    onChange={(e) =>
+                      setFilters({ ...filters, wouldRecommend: e.target.value })
+                    }
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm"
+                  >
+                    <option value="">All reviews</option>
+                    <option value="true">Would recommend</option>
+                    <option value="false">Would not recommend</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={filters.customerName}
+                    onChange={(e) =>
+                      setFilters({ ...filters, customerName: e.target.value })
+                    }
+                    placeholder="Customer name or email..."
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={filters.search}
+                    onChange={(e) =>
+                      setFilters({ ...filters, search: e.target.value })
+                    }
+                    placeholder="Search feedback comments..."
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm"
+                  />
+                </div>
               </div>
             </div>
           </div>

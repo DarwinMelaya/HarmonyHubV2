@@ -12,6 +12,8 @@ import {
   CheckCircle,
   AlertCircle,
   RefreshCw,
+  Filter,
+  Search,
 } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
 
@@ -21,6 +23,12 @@ const UserFeedback = () => {
   const [success, setSuccess] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [myFeedback, setMyFeedback] = useState([]);
+  const [feedbackFilters, setFeedbackFilters] = useState({
+    minRating: "",
+    maxRating: "",
+    wouldRecommend: "",
+    search: "",
+  });
 
   // Form states
   const [selectedBooking, setSelectedBooking] = useState("");
@@ -79,7 +87,21 @@ const UserFeedback = () => {
   const fetchMyFeedback = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${API_BASE_URL}/feedback/my-feedback`, {
+      const params = new URLSearchParams();
+      if (feedbackFilters.minRating)
+        params.append("minRating", feedbackFilters.minRating);
+      if (feedbackFilters.maxRating)
+        params.append("maxRating", feedbackFilters.maxRating);
+      if (feedbackFilters.wouldRecommend)
+        params.append("wouldRecommend", feedbackFilters.wouldRecommend);
+      if (feedbackFilters.search)
+        params.append("search", feedbackFilters.search);
+
+      const url = `${API_BASE_URL}/feedback/my-feedback${
+        params.toString() ? `?${params.toString()}` : ""
+      }`;
+
+      const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMyFeedback(res.data?.data || []);
@@ -587,9 +609,75 @@ const UserFeedback = () => {
           </form>
 
           {/* My Previous Feedback */}
-          {myFeedback.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-2xl font-bold mb-4">My Previous Feedback</h2>
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <h2 className="text-2xl font-bold">My Previous Feedback</h2>
+              <div className="bg-gray-800 rounded-lg px-4 py-3 flex flex-wrap gap-3 items-center">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={feedbackFilters.search}
+                    onChange={(e) =>
+                      setFeedbackFilters({
+                        ...feedbackFilters,
+                        search: e.target.value,
+                      })
+                    }
+                    placeholder="Search comments..."
+                    className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm text-white"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-gray-400" />
+                  <select
+                    value={feedbackFilters.minRating}
+                    onChange={(e) =>
+                      setFeedbackFilters({
+                        ...feedbackFilters,
+                        minRating: e.target.value,
+                      })
+                    }
+                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+                  >
+                    <option value="">Min rating</option>
+                    {[5, 4, 3, 2, 1].map((r) => (
+                      <option key={r} value={r}>
+                        {r}+
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={feedbackFilters.wouldRecommend}
+                    onChange={(e) =>
+                      setFeedbackFilters({
+                        ...feedbackFilters,
+                        wouldRecommend: e.target.value,
+                      })
+                    }
+                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white"
+                  >
+                    <option value="">All reviews</option>
+                    <option value="true">Would recommend</option>
+                    <option value="false">Would not recommend</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={fetchMyFeedback}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Apply
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {myFeedback.length === 0 ? (
+              <p className="text-gray-400 text-sm">
+                You have not submitted any feedback yet, or no reviews match the selected filters.
+              </p>
+            ) : (
               <div className="space-y-4">
                 {myFeedback.map((feedback) => (
                   <div
@@ -602,6 +690,12 @@ const UserFeedback = () => {
                         <span className="text-lg font-semibold">
                           {feedback.overallSatisfaction.rating}/5
                         </span>
+                        {feedback.valueFeedback?.wouldRecommend && (
+                          <span className="ml-2 inline-flex items-center gap-1 text-xs text-green-400 bg-green-900/40 px-2 py-1 rounded-full">
+                            <Heart className="w-3 h-3" />
+                            Would recommend
+                          </span>
+                        )}
                       </div>
                       <span className="text-sm text-gray-400">
                         {new Date(feedback.createdAt).toLocaleDateString()}
@@ -612,17 +706,26 @@ const UserFeedback = () => {
                         {feedback.overallSatisfaction.comment}
                       </p>
                     )}
+                    {feedback.additionalComments && (
+                      <p className="text-gray-400 text-sm mb-2">
+                        {feedback.additionalComments}
+                      </p>
+                    )}
                     {feedback.response && feedback.response.message && (
                       <div className="mt-4 pt-4 border-t border-gray-700">
-                        <p className="text-sm text-gray-400 mb-1">Response from owner:</p>
-                        <p className="text-gray-300">{feedback.response.message}</p>
+                        <p className="text-sm text-gray-400 mb-1">
+                          Response from owner:
+                        </p>
+                        <p className="text-gray-300">
+                          {feedback.response.message}
+                        </p>
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </Layout>
