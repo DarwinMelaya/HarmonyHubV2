@@ -1462,6 +1462,300 @@ const generateEarningsReportPDF = (reportData, filters, res) => {
   }
 };
 
+// Generate Damage Items Report PDF
+const generateDamageReportPDF = (reportData, filters, res) => {
+  try {
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 40, bottom: 40, left: 40, right: 40 },
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=damage-report-${Date.now()}.pdf`
+    );
+    doc.pipe(res);
+
+    let currentY = 60;
+    const tableX = 40;
+    const tableWidth = 515;
+    const cellHeight = 20;
+
+    // Header
+    doc
+      .fontSize(24)
+      .fillColor("#ea580c")
+      .font("Helvetica-Bold")
+      .text("GUEVARRA LIGHTS AND SOUNDS", tableX, currentY, {
+        align: "center",
+        width: tableWidth,
+      });
+
+    currentY += 30;
+    doc
+      .fontSize(18)
+      .fillColor("#000000")
+      .text("DAMAGE ITEMS REPORT", tableX, currentY, {
+        align: "center",
+        width: tableWidth,
+      });
+
+    currentY += 30;
+    doc
+      .fontSize(10)
+      .fillColor("#666666")
+      .text(
+        `Generated: ${new Date().toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
+        tableX,
+        currentY,
+        { align: "center", width: tableWidth }
+      );
+
+    currentY += 30;
+
+    // Statistics
+    doc
+      .fontSize(14)
+      .fillColor("#000000")
+      .font("Helvetica-Bold")
+      .text("Statistics", tableX, currentY);
+    currentY += 25;
+
+    const stats = [
+      ["Total Damaged Items", reportData.statistics.totalItems.toString()],
+      ["Total Quantity", reportData.statistics.totalQuantity.toString()],
+      ["Total Estimated Value", formatCurrency(reportData.statistics.totalValue)],
+    ];
+
+    stats.forEach(([label, value]) => {
+      drawCell(doc, tableX, currentY, 250, cellHeight, label, {
+        bold: true,
+        fontSize: 10,
+      });
+      drawCell(doc, tableX + 250, currentY, 265, cellHeight, value, {
+        fontSize: 10,
+      });
+      currentY += cellHeight;
+    });
+
+    currentY += 15;
+
+    // Damaged Inventory Table
+    if (reportData.damagedItems && reportData.damagedItems.length > 0) {
+      doc
+        .fontSize(14)
+        .fillColor("#000000")
+        .font("Helvetica-Bold")
+        .text("Damaged / Under-Maintenance Inventory", tableX, currentY);
+      currentY += 25;
+
+      drawCell(doc, tableX, currentY, 200, cellHeight, "Item", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+      });
+      drawCell(doc, tableX + 200, currentY, 80, cellHeight, "Qty", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+        align: "center",
+      });
+      drawCell(doc, tableX + 280, currentY, 100, cellHeight, "Value", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+        align: "right",
+      });
+      drawCell(doc, tableX + 380, currentY, 70, cellHeight, "Status", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+        align: "center",
+      });
+      drawCell(doc, tableX + 450, currentY, 65, cellHeight, "Condition", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+        align: "center",
+      });
+      currentY += cellHeight;
+
+      const itemsToShow = reportData.damagedItems.slice(0, 25);
+      itemsToShow.forEach((item) => {
+        if (currentY > 700) {
+          doc.addPage();
+          currentY = 60;
+        }
+
+        drawCell(doc, tableX, currentY, 200, cellHeight, item.name || "N/A", {
+          fontSize: 8,
+        });
+        drawCell(
+          doc,
+          tableX + 200,
+          currentY,
+          80,
+          cellHeight,
+          (item.quantity || 0).toString(),
+          {
+            fontSize: 8,
+            align: "center",
+          }
+        );
+        drawCell(
+          doc,
+          tableX + 280,
+          currentY,
+          100,
+          cellHeight,
+          formatCurrency((item.quantity || 0) * (item.price || 0)),
+          {
+            fontSize: 8,
+            align: "right",
+          }
+        );
+        drawCell(
+          doc,
+          tableX + 380,
+          currentY,
+          70,
+          cellHeight,
+          (item.status || "N/A").toUpperCase(),
+          {
+            fontSize: 8,
+            align: "center",
+          }
+        );
+        drawCell(
+          doc,
+          tableX + 450,
+          currentY,
+          65,
+          cellHeight,
+          (item.condition || "N/A").toUpperCase(),
+          {
+            fontSize: 8,
+            align: "center",
+          }
+        );
+        currentY += cellHeight;
+      });
+
+      if (reportData.damagedItems.length > 25) {
+        currentY += 10;
+        doc
+          .fontSize(9)
+          .fillColor("#666666")
+          .text(
+            `... and ${reportData.damagedItems.length - 25} more items`,
+            tableX,
+            currentY,
+            { align: "center", width: tableWidth }
+          );
+      }
+
+      currentY += 20;
+    }
+
+    // Damage from Bookings
+    if (reportData.damageFromBookings && reportData.damageFromBookings.length > 0) {
+      doc
+        .fontSize(14)
+        .fillColor("#000000")
+        .font("Helvetica-Bold")
+        .text("Reported Damage from Bookings", tableX, currentY);
+      currentY += 25;
+
+      drawCell(doc, tableX, currentY, 140, cellHeight, "Booking Date", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+      });
+      drawCell(doc, tableX + 140, currentY, 100, cellHeight, "Issue Type", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+        align: "center",
+      });
+      drawCell(doc, tableX + 240, currentY, 275, cellHeight, "Affected Items", {
+        bold: true,
+        fontSize: 9,
+        fillColor: "#d1d5db",
+      });
+      currentY += cellHeight;
+
+      const bookingsToShow = reportData.damageFromBookings.slice(0, 20);
+      bookingsToShow.forEach((booking) => {
+        if (currentY > 700) {
+          doc.addPage();
+          currentY = 60;
+        }
+
+        drawCell(
+          doc,
+          tableX,
+          currentY,
+          140,
+          cellHeight,
+          formatDate(booking.bookingDate),
+          {
+            fontSize: 8,
+          }
+        );
+        drawCell(
+          doc,
+          tableX + 140,
+          currentY,
+          100,
+          cellHeight,
+          (booking.issueType || "N/A").toUpperCase(),
+          {
+            fontSize: 8,
+            align: "center",
+          }
+        );
+        drawCell(
+          doc,
+          tableX + 240,
+          currentY,
+          275,
+          cellHeight,
+          (booking.affectedItems || []).join(", ") || "N/A",
+          {
+            fontSize: 8,
+          }
+        );
+        currentY += cellHeight;
+      });
+
+      if (reportData.damageFromBookings.length > 20) {
+        currentY += 10;
+        doc
+          .fontSize(9)
+          .fillColor("#666666")
+          .text(
+            `... and ${reportData.damageFromBookings.length - 20} more bookings`,
+            tableX,
+            currentY,
+            { align: "center", width: tableWidth }
+          );
+      }
+    }
+
+    doc.end();
+  } catch (error) {
+    console.error("Error generating damage report PDF:", error);
+    throw error;
+  }
+};
+
 module.exports = {
   generateSummaryReportPDF,
   generateBookingReportPDF,
@@ -1469,4 +1763,5 @@ module.exports = {
   generatePackageReportPDF,
   generateRevenueReportPDF,
   generateEarningsReportPDF,
+  generateDamageReportPDF,
 };
